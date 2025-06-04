@@ -15,14 +15,14 @@ TcpListener server = new TcpListener(address, port);
 server.Start();
 Console.WriteLine($"Server started on {address}:{port}");
 
+var myWebServer = new MyWebServer();
 
 while (true)
 {
     // Приймаємо з'єднання від клієнта
     TcpClient client = server.AcceptTcpClient();
     Console.WriteLine("Client connected");
-
-    var myWebServer = new MyWebServer();
+        
 
     Thread clientThread = new Thread(() =>
     {
@@ -32,18 +32,6 @@ while (true)
         // Мережевий поток для роботи з клієнтом
         NetworkStream stream = client.GetStream();
         myWebServer.HandleRequest(stream);
-
-        
-
-        //var message = Encoding.UTF8.GetString(MyNetworkHerper.GetDataBlock(stream));
-        //Console.WriteLine($"Received message: {message}");
-
-
-        //Console.WriteLine("Sent welcome message to client");
-        //MyNetworkHerper.SendDataBlock(stream, System.Text.Encoding.UTF8.GetBytes("Welcome to the chat server!"));
-
-
-
         Console.WriteLine("Client disconnected");
         client.Close();
 
