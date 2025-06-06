@@ -7,6 +7,8 @@ using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using TcpChatServer.Models;
+using BCrypt.Net;
 
 namespace TcpChatServer;
 
@@ -45,37 +47,71 @@ public class MyChatServer
         writer.Flush();
     }
 
+    private string HashPassword(string password)
+    {
+        return BCrypt.Net.BCrypt.HashPassword(password);
+    }
+
+    private bool VerifyPassword(string password, string hashedPassword)
+    {
+        return BCrypt.Net.BCrypt.Verify(password, hashedPassword);
+    }
+
     private void HandleRegister(ClientRequest request, NetworkStream stream)
     {
 
         var reqisterRequest = JsonSerializer.Deserialize<RegisterRequest>(request.Body);
 
-        // Перевірити чи користувач з таким логіном вже існує
-        var userExists = true; // Тут має бути логіка перевірки в базі даних
-        // Якщо існує, то повернути помилку
-        if (userExists)
+        if (reqisterRequest == null || string.IsNullOrEmpty(reqisterRequest.Login) || string.IsNullOrEmpty(reqisterRequest.Password))
         {
             SendResponse(stream,
                 ResponseStatus.ERROR,
-                JsonSerializer.Serialize(
-                    new ErrorResponse { Message = "User already exists" })
+                JsonSerializer.Serialize(new ErrorResponse { Message = "Invalid request body" })
                 );
             return;
         }
-        // Якщо не існує, то створити нового користувача і повернути успішний результат з токеном
+
+        // Перевірити чи користувач з таким логіном вже існує
+
+        using (var dbContext = new ChatContext())
+        {
+            var userExists = dbContext.Users.Any(u => u.Login == reqisterRequest.Login);
+            // Якщо існує, то повернути помилку
+            if (userExists)
+            {
+                SendResponse(stream,
+                    ResponseStatus.ERROR,
+                    JsonSerializer.Serialize(
+                        new ErrorResponse { Message = "User already exists" })
+                    );
+                return;
+            }
 
 
-        SendResponse(stream,
-            ResponseStatus.OK,
-            JsonSerializer.Serialize(
-                new RegisterResponse
-                {
-                    UserId = 123, // Тут має бути логіка створення користувача в базі даних
-                    AuthToken = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" // Тут має бути логіка генерації токена
-                })
-            );
+            // Якщо не існує, то створити нового користувача і повернути успішний результат з токеном
+            var user = new User
+            {
+                Login = reqisterRequest.Login,
+                PasswordHash = HashPassword(reqisterRequest.Password),
+                CreatedAt = DateTime.Now,
+
+                AuthToken = Guid.NewGuid().ToString() // Тут має бути логіка генерації токена
+            };
+            dbContext.Users.Add(user);
+            dbContext.SaveChanges(); // Зберегти користувача в базі даних
+
+
+            SendResponse(stream,
+                ResponseStatus.OK,
+                JsonSerializer.Serialize(
+                    new RegisterResponse
+                    {
+                        UserId = user.UserId,
+                        AuthToken = user.AuthToken
+                    })
+                );
+        }
     }
-
 
     public void HandleRequest(NetworkStream stream)
     {
