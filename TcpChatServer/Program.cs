@@ -15,7 +15,7 @@ TcpListener server = new TcpListener(address, port);
 server.Start();
 Console.WriteLine($"Server started on {address}:{port}");
 
-var myWebServer = new MyWebServer();
+var myChatServer = new MyChatServer();
 
 while (true)
 {
@@ -31,7 +31,8 @@ while (true)
 
         // Мережевий поток для роботи з клієнтом
         NetworkStream stream = client.GetStream();
-        myWebServer.HandleRequest(stream);
+        myChatServer.HandleRequest(stream);
+        
         Console.WriteLine("Client disconnected");
         client.Close();
 
@@ -40,29 +41,3 @@ while (true)
 
 
 }
-
-
-/*
- * Доробити свій веб сервер
- * 
- * Головна сторінка / - коротка інфрормація про цей проєкт та посилання на сторінку /about
- * Сторінка інформація про вас /about з вашим фото
- * Картинка (ваше фото) - адреса 127.0.0.1/photo.jpeg
- * 
- * 
- */
-
-
-/*
- * Чат без постійного з'єднання
- * 
- * 
- * 
- * З'єднання клієнта з сервером
- * Клієнт надсилає запит серверу
- * Сервер відповідає клієнту
- * З'єднання клієнта з сервером закривається
- * 
- * 
- * 
- */ 
