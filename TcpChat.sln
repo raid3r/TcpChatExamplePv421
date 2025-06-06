@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpChatClient", "TcpChatCli
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClassLibrary", "ClassLibrary\ClassLibrary.csproj", "{6FF8CFF5-E919-439E-AB93-3E7A5D47C453}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyWebServer", "MyWebServer\MyWebServer.csproj", "{B4B46C49-BECB-475D-9701-C81549229FE7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{6FF8CFF5-E919-439E-AB93-3E7A5D47C453}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6FF8CFF5-E919-439E-AB93-3E7A5D47C453}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6FF8CFF5-E919-439E-AB93-3E7A5D47C453}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4B46C49-BECB-475D-9701-C81549229FE7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4B46C49-BECB-475D-9701-C81549229FE7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4B46C49-BECB-475D-9701-C81549229FE7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4B46C49-BECB-475D-9701-C81549229FE7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
