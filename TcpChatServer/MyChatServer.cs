@@ -59,7 +59,6 @@ public class MyChatServer
 
     private void HandleRegister(ClientRequest request, NetworkStream stream)
     {
-
         var reqisterRequest = JsonSerializer.Deserialize<RegisterRequest>(request.Body);
 
         if (reqisterRequest == null || string.IsNullOrEmpty(reqisterRequest.Login) || string.IsNullOrEmpty(reqisterRequest.Password))
@@ -113,6 +112,113 @@ public class MyChatServer
         }
     }
 
+
+    private void HandleLogin(ClientRequest request, NetworkStream stream)
+    {
+        var loginRequest = JsonSerializer.Deserialize<LoginRequest>(request.Body);
+
+        if (loginRequest == null || string.IsNullOrEmpty(loginRequest.Login) || string.IsNullOrEmpty(loginRequest.Password))
+        {
+            SendResponse(stream,
+                ResponseStatus.ERROR,
+                JsonSerializer.Serialize(new ErrorResponse { Message = "Invalid request body" })
+                );
+            return;
+        }
+
+        // Перевірити чи користувач з таким логіном вже існує
+
+        using (var dbContext = new ChatContext())
+        {
+            var user = dbContext.Users.FirstOrDefault(u => u.Login == loginRequest.Login);
+
+            // Якщо не існує, то повернути помилку
+            if (user == null)
+            {
+                SendResponse(stream,
+                    ResponseStatus.ERROR,
+                    JsonSerializer.Serialize(
+                        new ErrorResponse { Message = "User not exists" })
+                    );
+                return;
+            }
+
+            if (!VerifyPassword(loginRequest.Password, user.PasswordHash))
+            {
+                SendResponse(stream,
+                    ResponseStatus.ERROR,
+                    JsonSerializer.Serialize(
+                        new ErrorResponse { Message = "Invalid password" })
+                    );
+                return;
+            }
+
+            user.AuthToken = Guid.NewGuid().ToString();
+            dbContext.SaveChanges(); // Зберегти користувача в базі даних
+
+
+            SendResponse(stream,
+                ResponseStatus.OK,
+                JsonSerializer.Serialize(
+                    new LoginResponse
+                    {
+                        UserId = user.UserId,
+                        AuthToken = user.AuthToken
+                    })
+                );
+        }
+    }
+
+
+    private void HandleGetUsers(ClientRequest request, NetworkStream stream)
+    {
+        var getUsersRequest = JsonSerializer.Deserialize<GetUsersRequest>(request.Body);
+
+        var authToken = request.Authorization;
+        if (string.IsNullOrEmpty(authToken))
+        {
+            SendResponse(stream,
+                ResponseStatus.ERROR,
+                JsonSerializer.Serialize(new ErrorResponse { Message = "Authorization token is required" })
+                );
+            return;
+        }
+
+        // Перевірити чи користувач з таким токеном існує
+        using (var dbContext = new ChatContext())
+        {
+            var user = dbContext.Users.FirstOrDefault(u => u.AuthToken == authToken);
+            // Якщо не існує, то повернути помилку
+            if (user == null)
+            {
+                SendResponse(stream,
+                    ResponseStatus.ERROR,
+                    JsonSerializer.Serialize(
+                        new ErrorResponse { Message = "Invalid authorization token" })
+                    );
+                return;
+            }
+
+            SendResponse(stream,
+                ResponseStatus.OK,
+                JsonSerializer.Serialize(
+                    new GetUsersResponse
+                    {
+                        Users = [..dbContext.Users
+                        .Select(u => new ChatUser
+                        {
+                            UserId = u.UserId,
+                            Login = u.Login
+                        })]
+                    }
+                    )
+                );
+        }
+
+
+    }
+
+
     public void HandleRequest(NetworkStream stream)
     {
         // Отримати запит від клієнта
@@ -124,12 +230,16 @@ public class MyChatServer
         // Зрозуміти що в запиті
         // Сформувати відповідь
         // Відправити відповідь
-        switch (request.Method) {
+        switch (request.Method)
+        {
             case RequestType.Register:
                 HandleRegister(request, stream);
                 break;
             case RequestType.Login:
-                // Тут має бути логіка авторизації користувача
+                HandleLogin(request, stream);
+                break;
+            case RequestType.GetUsers:
+                HandleGetUsers(request, stream);
                 break;
             case RequestType.SendMessage:
                 // Тут має бути логіка обробки відправки повідомлення
@@ -137,9 +247,7 @@ public class MyChatServer
             case RequestType.GetMessages:
                 // Тут має бути логіка отримання повідомлень
                 break;
-            case RequestType.GetUsers:
-                // Тут має бути логіка отримання списку користувачів
-                break;
+
             default:
                 SendResponse(stream,
                     ResponseStatus.ERROR,
@@ -151,8 +259,8 @@ public class MyChatServer
 
 
 
-        
-        
+
+
     }
 }
 
