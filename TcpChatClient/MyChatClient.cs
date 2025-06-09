@@ -24,6 +24,9 @@ public class MyChatClient(IPAddress iPAddress, int port)
         return client;
     }
 
+
+    private string AuthorizationToken = string.Empty;
+
     //var serverData = MyNetworkHerper.GetDataBlock(client.GetStream());
     //    var serverMessage = Encoding.UTF8.GetString(serverData);
     //    Console.WriteLine($"Received message from server: {serverMessage}");
@@ -55,6 +58,49 @@ public class MyChatClient(IPAddress iPAddress, int port)
         };
     }
 
+    public void Login(string login, string password)
+    {
+        var client = Connect();
+        var stream = client.GetStream();
+
+        SendRequest(stream,
+            new ClientRequest
+            {
+                Method = RequestType.Login,
+                Authorization = "N/A",
+                Body = JsonSerializer.Serialize(
+                    new LoginRequest
+                    {
+                        Login = login,
+                        Password = password
+                    }),
+            });
+        // Читання відповіді від сервера
+        var response = ReadResponse(stream);
+
+        // Обробка відповіді
+        if (response.Status == ResponseStatus.OK)
+        {
+            Console.WriteLine("login successful!");
+            var registerResponse = JsonSerializer.Deserialize<LoginResponse>(response.Body);
+            if (registerResponse != null)
+            {
+                AuthorizationToken = registerResponse.AuthToken;
+                Console.WriteLine($"Token: {registerResponse.AuthToken}");
+            }
+            else
+            {
+                Console.WriteLine("Failed to parse login response.");
+            }
+        }
+        else
+        {
+            var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Body);
+            Console.WriteLine($"Login failed: {errorResponse?.Message}");
+        }
+        client.Close();
+
+    }
 
     public void Register(string login, string password)
     {
@@ -85,6 +131,7 @@ public class MyChatClient(IPAddress iPAddress, int port)
             var registerResponse = JsonSerializer.Deserialize<RegisterResponse>(response.Body);
             if (registerResponse != null)
             {
+                AuthorizationToken = registerResponse.AuthToken;
                 Console.WriteLine($"Token: {registerResponse.AuthToken}");
             }
             else
@@ -98,5 +145,37 @@ public class MyChatClient(IPAddress iPAddress, int port)
             Console.WriteLine($"Registration failed: {errorResponse?.Message}");
         }
         client.Close();
+    }
+
+
+    public List<ChatUser> GetUsers()
+    {
+        var client = Connect();
+        var stream = client.GetStream();
+
+        SendRequest(stream,
+            new ClientRequest
+            {
+                Method = RequestType.GetUsers,
+                Authorization = AuthorizationToken,
+                Body = JsonSerializer.Serialize(new GetUsersRequest()),
+            });
+        // Читання відповіді від сервера
+        var response = ReadResponse(stream);
+        client.Close();
+
+        // Обробка відповіді
+        if (response.Status == ResponseStatus.OK)
+        {
+            Console.WriteLine("Get users successful!");
+            var registerResponse = JsonSerializer.Deserialize<GetUsersResponse>(response.Body);
+            return registerResponse?.Users ?? [];
+        } 
+        else
+        {
+            var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Body);
+            Console.WriteLine($"Error: {errorResponse?.Message}");
+            return [];
+        }
     }
 }
