@@ -9,6 +9,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using TcpChatServer.Models;
 using BCrypt.Net;
+using System.Runtime.ExceptionServices;
+using Microsoft.EntityFrameworkCore;
 
 namespace TcpChatServer;
 
@@ -217,8 +219,104 @@ public class MyChatServer
 
 
     }
-
-
+    public void HandleSendMessage(ClientRequest request, NetworkStream stream)
+    {
+        var sendMessageRequest = JsonSerializer.Deserialize<SendMessageRequest>(request.Body);
+        var authToken = request.Authorization;
+        if (string.IsNullOrEmpty(authToken))
+        {
+            SendResponse(stream,
+                ResponseStatus.ERROR,
+                JsonSerializer.Serialize(new ErrorResponse { Message = "Authorization token is required" })
+                );
+            return;
+        }
+        // Перевірити чи користувач з таким токеном існує
+        using (var dbContext = new ChatContext())
+        {
+            var user = dbContext.Users.FirstOrDefault(u => u.AuthToken == authToken);
+            // Якщо не існує, то повернути помилку
+            if (user == null)
+            {
+                SendResponse(stream,
+                    ResponseStatus.ERROR,
+                    JsonSerializer.Serialize(
+                        new ErrorResponse { Message = "Invalid authorization token" })
+                    );
+                return;
+            }
+            // Додати повідомлення в базу даних
+            var message = new Message
+            {
+                From = user,
+                Text = sendMessageRequest.Text,
+                CreatedAt = DateTime.Now
+            };
+            dbContext.Messages.Add(message);
+            dbContext.SaveChanges(); // Зберегти повідомлення в базі даних
+            SendResponse(stream,
+                ResponseStatus.OK,
+                JsonSerializer.Serialize(
+                    new SendMessageResponse
+                    {
+                        MessageId = message.MessageId
+                    })
+                );
+        }
+    }
+    public void HandleGetMessage(ClientRequest request, NetworkStream stream)
+    {
+        var getMessagesRequest = JsonSerializer.Deserialize<GetMessagesRequest>(request.Body);
+        var authToken = request.Authorization;
+        if (string.IsNullOrEmpty(authToken))
+        {
+            SendResponse(stream,
+                ResponseStatus.ERROR,
+                JsonSerializer.Serialize(new ErrorResponse { Message = "Authorization token is required" })
+                );
+            return;
+        }
+        // Перевірити чи користувач з таким токеном існує
+        using (var dbContext = new ChatContext())
+        {
+            var user = dbContext.Users.FirstOrDefault(u => u.AuthToken == authToken);
+            // Якщо не існує, то повернути помилку
+            if (user == null)
+            {
+                SendResponse(stream,
+                    ResponseStatus.ERROR,
+                    JsonSerializer.Serialize(
+                        new ErrorResponse { Message = "Invalid authorization token" })
+                    );
+                return;
+            }
+            // Отримати повідомлення з бази даних
+            var messagesQuery = dbContext.Messages.Include(x=> x.From).AsQueryable();
+             messagesQuery = messagesQuery.Where(m => m.MessageId > getMessagesRequest.LastMessageId);
+            
+             SendResponse(stream,
+                ResponseStatus.OK,
+                JsonSerializer.Serialize(
+                    new GetMessagesResponse
+                    {
+                        Messages = [..messagesQuery
+                        .Select(u => new ChatMessage
+                        {
+                            MessageId = u.MessageId,
+                            Sender = new ChatUser
+                            {
+                                UserId = u.From.UserId,
+                                Login = u.From.Login
+                            },
+                            Text = u.Text,
+                            Timestamp = u.CreatedAt
+                        })
+                        ]
+                    }
+                    )
+                );
+        }
+    }
     public void HandleRequest(NetworkStream stream)
     {
         // Отримати запит від клієнта
@@ -242,10 +340,10 @@ public class MyChatServer
                 HandleGetUsers(request, stream);
                 break;
             case RequestType.SendMessage:
-                // Тут має бути логіка обробки відправки повідомлення
+                HandleSendMessage(request, stream);
                 break;
             case RequestType.GetMessages:
-                // Тут має бути логіка отримання повідомлень
+                HandleGetMessage(request, stream);
                 break;
 
             default:

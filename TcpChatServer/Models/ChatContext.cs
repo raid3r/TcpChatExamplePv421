@@ -13,6 +13,6 @@ public class ChatContext: DbContext
     public DbSet<Message> Messages { get; set; } = null!;
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite("Data Source=C:\\Users\\kvvkv\\source\\repos\\TcpChat\\TcpChatServer\\chat.db");
+        optionsBuilder.UseSqlite("Data Source=D:\\EDUCATION\\NetworkPrograming\\MyChat\\TcpChatServer\\chat.db");
     }
 }

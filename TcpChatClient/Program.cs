@@ -33,12 +33,14 @@ else
 {
     chatClient.Register(login, password);
 }
-
 var users = chatClient.GetUsers();
 users.ForEach(user => Console.WriteLine($"Id: {user.UserId} login: {user.Login}"));
-
-
-
+//Console.WriteLine("Enter message to send :");
+//var message = Console.ReadLine();
+//chatClient.SendMessage(message);
+var messages = chatClient.GetMessages(0);
+messages.ForEach(msg => 
+     Console.WriteLine($"{msg.Timestamp} {msg.Sender.Login} : {msg.Text} "));
 
 Console.ReadLine();
 
