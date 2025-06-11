@@ -20,19 +20,10 @@ public class MyChatClient(IPAddress iPAddress, int port)
         // Наприклад, створення TCP-клієнта та підключення до сервера
         var client = new TcpClient();
         client.Connect(iPAddress, port);
-        Console.WriteLine($"Connected to server at {iPAddress}:{port}");
+        //Console.WriteLine($"Connected to server at {iPAddress}:{port}");
         return client;
     }
     private string AuthorizationToken = string.Empty;
-
-    //var serverData = MyNetworkHerper.GetDataBlock(client.GetStream());
-    //    var serverMessage = Encoding.UTF8.GetString(serverData);
-    //    Console.WriteLine($"Received message from server: {serverMessage}");
-
-    //var message = "Hello, server!";
-    //    NetworkStream stream = client.GetStream();
-    //    MyNetworkHerper.SendDataBlock(stream, System.Text.Encoding.UTF8.GetBytes(message));
-    //Console.WriteLine($"Sent message to server: {message}");
 
     private void SendRequest(NetworkStream stream, ClientRequest clientRequest)
     {
@@ -55,7 +46,7 @@ public class MyChatClient(IPAddress iPAddress, int port)
         };
     }
 
-    public void Login(string login, string password)
+    public LoginResponse Login(string login, string password)
     {
         var client = Connect();
         var stream = client.GetStream();
@@ -74,28 +65,27 @@ public class MyChatClient(IPAddress iPAddress, int port)
             });
         // Читання відповіді від сервера
         var response = ReadResponse(stream);
+        client.Close();
 
         // Обробка відповіді
         if (response.Status == ResponseStatus.OK)
         {
-            Console.WriteLine("login successful!");
-            var registerResponse = JsonSerializer.Deserialize<LoginResponse>(response.Body);
-            if (registerResponse != null)
+            var loginResponse = JsonSerializer.Deserialize<LoginResponse>(response.Body);
+            if (loginResponse != null)
             {
-                AuthorizationToken = registerResponse.AuthToken;
-                Console.WriteLine($"Token: {registerResponse.AuthToken}");
+                AuthorizationToken = loginResponse.AuthToken;
+                return loginResponse;
             }
             else
             {
-                Console.WriteLine("Failed to parse login response.");
+                throw new Exception("Failed to parse login response.");
             }
         }
         else
         {
             var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Body);
-            Console.WriteLine($"Login failed: {errorResponse?.Message}");
+            throw new Exception($"Login failed: {errorResponse?.Message}");
         }
-        client.Close();
     }
      
     public void SendMessage(string message)
@@ -117,19 +107,21 @@ public class MyChatClient(IPAddress iPAddress, int port)
             });
         // Читання відповіді від сервера
         var response = ReadResponse(stream);
+        client.Close();
+
         // Обробка відповіді
         if (response.Status == ResponseStatus.OK)
         {
-            Console.WriteLine("Message sent successfully!");
+            return; // Успішно надіслано повідомлення
         }
         else
         {
             var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Body);
-            Console.WriteLine($"Failed to send message: {errorResponse?.Message}");
+            throw new Exception($"Send message failed: {errorResponse?.Message}");
         }
-        client.Close();
+        
     }
-    public void Register(string login, string password)
+    public RegisterResponse Register(string login, string password)
     {
         // Тут реалізуйте логіку реєстрації користувача
         // Наприклад, відправка запиту на сервер з логіном та паролем
@@ -150,28 +142,28 @@ public class MyChatClient(IPAddress iPAddress, int port)
             });
         // Читання відповіді від сервера
         var response = ReadResponse(stream);
+        client.Close();
 
         // Обробка відповіді
         if (response.Status == ResponseStatus.OK)
         {
-            Console.WriteLine("Registration successful!");
             var registerResponse = JsonSerializer.Deserialize<RegisterResponse>(response.Body);
             if (registerResponse != null)
             {
                 AuthorizationToken = registerResponse.AuthToken;
-                Console.WriteLine($"Token: {registerResponse.AuthToken}");
+                return registerResponse;
             }
             else
             {
-                Console.WriteLine("Failed to parse registration response.");
+                throw new Exception("Failed to parse registration response.");
             }
         }
         else
         {
             var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Body);
-            Console.WriteLine($"Registration failed: {errorResponse?.Message}");
+            throw new Exception($"Registration failed: {errorResponse?.Message}");
         }
-        client.Close();
+        
     }
 
 
@@ -194,7 +186,6 @@ public class MyChatClient(IPAddress iPAddress, int port)
         // Обробка відповіді
         if (response.Status == ResponseStatus.OK)
         {
-            Console.WriteLine("Get users successful!");
             var registerResponse = JsonSerializer.Deserialize<GetUsersResponse>(response.Body);
             return registerResponse?.Users ?? [];
         } 
@@ -224,15 +215,13 @@ public class MyChatClient(IPAddress iPAddress, int port)
         // Обробка відповіді
         if (response.Status == ResponseStatus.OK)
         {
-            Console.WriteLine("Get messages successful!");
             var registerResponse = JsonSerializer.Deserialize<GetMessagesResponse>(response.Body);
             return registerResponse?.Messages ?? [];
         } 
         else
         {
             var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(response.Body);
-            Console.WriteLine($"Error: {errorResponse?.Message}");
-            return [];
+            throw new Exception($"Get messages failed: {errorResponse?.Message}");
         }
     }
 }
