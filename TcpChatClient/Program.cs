@@ -5,42 +5,8 @@ using System.Text;
 using TcpChatClient;
 
 
+Console.InputEncoding = Encoding.UTF8;
+Console.OutputEncoding = Encoding.UTF8;
 
-var chatClient = new MyChatClient(IPAddress.Parse("127.0.0.1"), 5001);
-//var login = "user1";
-//var password = "password";
-
-Console.WriteLine("Chat Client");
-Console.WriteLine("1- Login, 2 - Register");
-var choice = Console.ReadLine();
-if (choice != "1" && choice != "2")
-{
-    Console.WriteLine("Invalid choice. Exiting.");
-    return;
-}
-
-Console.Write("Login: ");
-var login = Console.ReadLine();
-
-Console.Write("Password: ");
-var password = Console.ReadLine();
-
-if (choice == "1")
-{
-    chatClient.Login(login, password);
-}
-else
-{
-    chatClient.Register(login, password);
-}
-var users = chatClient.GetUsers();
-users.ForEach(user => Console.WriteLine($"Id: {user.UserId} login: {user.Login}"));
-//Console.WriteLine("Enter message to send :");
-//var message = Console.ReadLine();
-//chatClient.SendMessage(message);
-var messages = chatClient.GetMessages(0);
-messages.ForEach(msg => 
-     Console.WriteLine($"{msg.Timestamp} {msg.Sender.Login} : {msg.Text} "));
-
-Console.ReadLine();
-
+var consoleClient = new ConsoleChatClient();
+consoleClient.Run();
